@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriPass - Student Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="hero">
+        <div class="logo-container">
+            <h1 class="logo-text animate-on-load">VeriPass</h1>
+            <p class="subtitle animate-on-load">Verify documents online. Skip the line</p>
+        </div>
+    </header>
+
+    <div class="blue-bar animate-on-load">
+        <h2>Student Login</h2>
+    </div>
+
+    <main class="login-container">
+        <div class="login-card animate-on-load">
+            <form id="login-form">
+                
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="Enter your email address" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" placeholder="Enter your password" required>
+                        <span class="eye-icon">👁️</span>
+                    </div>
+                </div>
+
+                <a href="#" class="forgot-password">Forgot Password?</a>
+                
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>Copyright Text</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

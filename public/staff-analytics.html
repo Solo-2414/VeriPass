@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriPass - Analytics & Efficiency</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-bg">
+
+    <div id="header-placeholder"></div>
+
+    <main class="dashboard-container">
+        
+        <div class="upload-page-header animate-on-load">
+            <h2 class="upload-page-title">Office Efficiency Analytics</h2>
+            <div style="color: #666; font-size: 0.95rem;">Registrar Office Data - Last 7 Days</div>
+        </div>
+
+        <div class="summary-cards animate-on-load">
+            <div class="summary-card" style="background-color: white; border-top: 4px solid #4A72A4;">
+                <h4>Transactions / Hour</h4>
+                <h2 style="color: #4A72A4;">12.5</h2>
+            </div>
+            <div class="summary-card" style="background-color: white; border-top: 4px solid #2ECC71;">
+                <h4>Total Processed</h4>
+                <h2 style="color: #2ECC71;">342</h2>
+            </div>
+            <div class="summary-card" style="background-color: white; border-top: 4px solid #F39C12;">
+                <h4>Avg. Wait Time</h4>
+                <h2 style="color: #F39C12;">4m 15s</h2>
+            </div>
+            <div class="summary-card" style="background-color: white; border-top: 4px solid #E74C3C;">
+                <h4>Incomplete Rate</h4>
+                <h2 style="color: #E74C3C;">18%</h2>
+            </div>
+        </div>
+
+        <div class="analytics-layout animate-on-load">
+            <div class="chart-panel">
+                <h3>Processing Speed by Day</h3>
+                <div class="mock-chart">
+                    <div class="bar-container"><div class="bar" style="height: 60%;"></div><span>Mon</span></div>
+                    <div class="bar-container"><div class="bar" style="height: 80%;"></div><span>Tue</span></div>
+                    <div class="bar-container"><div class="bar" style="height: 100%;"></div><span>Wed</span></div>
+                    <div class="bar-container"><div class="bar" style="height: 50%;"></div><span>Thu</span></div>
+                    <div class="bar-container"><div class="bar" style="height: 90%;"></div><span>Fri</span></div>
+                </div>
+            </div>
+            
+            <div class="chart-panel">
+                <h3>System Logs & Alerts</h3>
+                <ul class="alert-list">
+                    <li><span class="alert-dot green"></span> Processing speed is 15% faster than last week.</li>
+                    <li><span class="alert-dot red"></span> High volume of OJT submissions detected.</li>
+                    <li><span class="alert-dot orange"></span> Wait times approaching 10 minutes. Consider allocating more staff.</li>
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="dash-footer">
+        <p>Copyright Text</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
