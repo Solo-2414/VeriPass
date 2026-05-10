@@ -41,10 +41,14 @@ const upload = multer({ storage: storage });
 
 // --- DATABASE CONNECTION SETUP ---
 const db = mysql.createConnection({
-    host: 'localhost',       
-    user: 'root',            
-    password: '241405', // REPLACE with your actual DB password (was 241405)
-    database: 'veripass'  
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root', 
+    password: process.env.DB_PASSWORD || '241405', 
+    database: process.env.DB_NAME || 'MediSparta',
+    port: process.env.DB_PORT || 3306,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 db.connect((err) => {
