@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriPass - Admin Settings</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-bg">
+
+    <div id="header-placeholder"></div>
+
+    <main class="dashboard-container">
+        
+        <div class="upload-page-header animate-on-load">
+            <h2 class="upload-page-title">User Management</h2>
+            <div class="header-controls">
+                <button class="btn-primary" id="open-add-staff-modal">+ Add New Staff</button>
+            </div>
+        </div>
+
+        <div class="table-container animate-on-load">
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Full Name</th>
+                        <th>Email Address</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-users-body">
+                    </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <div class="modal-overlay" id="add-staff-modal">
+        <div class="modal-content">
+            <button class="close-btn" id="close-add-staff-modal">&times;</button>
+            <h2 class="modal-title">Create Staff Account</h2>
+            
+            <form id="add-staff-form">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="new-staff-name" required placeholder="e.g. Jane Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="new-staff-email" required placeholder="staff@veripass.edu">
+                </div>
+                <div class="form-group">
+                    <label>Temporary Password</label>
+                    <input type="password" id="new-staff-password" required placeholder="Set a password">
+                </div>
+                <div class="form-group">
+                    <label>Assigned Office</label>
+                    <select id="new-staff-office" required>
+                        <option value="1">Registrar Office</option>
+                        <option value="2">Dean's Office</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn" style="width: 100%; margin-top: 15px;">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="edit-staff-modal">
+        <div class="modal-content">
+            <button class="close-btn" id="close-edit-staff-modal">&times;</button>
+            <h2 class="modal-title">Edit Staff Account</h2>
+            
+            <form id="edit-staff-form">
+                <input type="hidden" id="edit-user-id"> 
+                
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="edit-staff-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="edit-staff-email" required>
+                </div>
+                <div class="form-group">
+                    <label>Reset Password (Optional)</label>
+                    <input type="password" id="edit-staff-password" placeholder="Leave blank to keep current password">
+                </div>
+                <div class="form-group">
+                    <label>Assigned Office</label>
+                    <select id="edit-staff-office" required>
+                        <option value="1">Registrar Office</option>
+                        <option value="2">Dean's Office</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn" style="width: 100%; margin-top: 15px;">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

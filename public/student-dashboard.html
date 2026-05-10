@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeriPass - Home Page</title>
+    <title>VeriPass - Student Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dashboard-bg">
@@ -12,26 +12,26 @@
 
     <main class="dashboard-container">
         
-        <div class="summary-cards">
+        <div class="summary-cards animate-on-load">
             <div class="summary-card card-submitted">
                 <h4>Submitted</h4>
-                <h2>15</h2>
+                <h2>0</h2>
             </div>
             <div class="summary-card card-approved">
                 <h4>Approved</h4>
-                <h2>15</h2>
+                <h2>0</h2>
             </div>
             <div class="summary-card card-pending">
                 <h4>Pending</h4>
-                <h2>15</h2>
+                <h2>0</h2>
             </div>
             <div class="summary-card card-rejected">
                 <h4>Rejected</h4>
-                <h2>15</h2>
+                <h2>0</h2>
             </div>
         </div>
 
-        <div class="table-container">
+        <div class="table-container animate-on-load">
             <table class="status-table">
                 <thead>
                     <tr>
@@ -42,28 +42,8 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>OJT</td>
-                        <td>5 minutes</td>
-                        <td>15/3/2026</td>
-                        <td class="text-red">Processing</td>
-                        <td><button class="btn-outline-orange">View</button></td>
-                    </tr>
-                    <tr>
-                        <td>OJT</td>
-                        <td>5 minutes</td>
-                        <td>14/3/2026</td>
-                        <td class="text-green">Approved</td>
-                        <td><button class="btn-outline-purple">☁ Download</button></td>
-                    </tr>
-                    <tr>
-                        <td>OJT</td>
-                        <td>5 minutes</td>
-                        <td>15/2/2026</td>
-                        <td class="text-green">Approved</td>
-                        <td><button class="btn-outline-purple">☁ Download</button></td>
-                    </tr>
+                <tbody id="student-docs-body">
+                    
                 </tbody>
             </table>
         </div>
@@ -71,37 +51,9 @@
     </main>
 
     <footer class="dash-footer">
-        <p>Copyright Text</p>
+        <p>VeriPass &copy; 2026. All rights reserved.</p>
     </footer>
 
-    <script>
-        // 1. DYNAMICALLY LOAD THE HEADER
-        fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                // Inject the header HTML into the placeholder
-                document.getElementById('header-placeholder').innerHTML = data;
-                
-                // Attach the logout functionality AFTER the header is loaded
-                document.getElementById('logout-btn').addEventListener('click', async () => {
-                    await fetch('/api/logout', { method: 'POST' });
-                    window.location.href = '/'; 
-                });
-            });
-
-        // 2. KEEP THE SESSION CHECK FOR SECURITY
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                const response = await fetch('/api/session-check');
-                const data = await response.json();
-                if (!data.loggedIn) {
-                    alert("Unauthorized! Please log in first.");
-                    window.location.href = '/';
-                }
-            } catch (error) {
-                console.error("Session check failed", error);
-            }
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

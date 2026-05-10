@@ -214,6 +214,27 @@ app.get('/api/staff/stats', (req, res) => {
     });
 });
 
+// 3. Fetch Data for Student Dashboard Summary Cards
+app.get('/api/student/stats', (req, res) => {
+    // Security check: Must be a logged-in student
+    if (!req.session.user || req.session.user.role !== 'student') return res.status(403).json({ success: false });
+
+    const query = `
+        SELECT 
+            SUM(CASE WHEN status = 'Submitted' THEN 1 ELSE 0 END) as submitted,
+            SUM(CASE WHEN status = 'Valid' THEN 1 ELSE 0 END) as approved,
+            SUM(CASE WHEN status = 'Processing' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status IN ('Incomplete', 'Missing') THEN 1 ELSE 0 END) as rejected
+        FROM transactions
+        WHERE student_id = ?
+    `;
+
+    db.query(query, [req.session.user.id], (err, results) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true, stats: results[0] });
+    });
+});
+
 // 4. Fetch Processed History
 app.get('/api/staff/processed-history', (req, res) => {
     if (!req.session.user || req.session.user.role !== 'staff') return res.status(403).json({ success: false });
@@ -230,6 +251,156 @@ app.get('/api/staff/processed-history', (req, res) => {
     db.query(query, (err, results) => {
         if (err) return res.status(500).json({ success: false });
         res.json({ success: true, history: results });
+    });
+});
+
+// 5. Fetch Daily Chart Data
+app.get('/api/staff/chart-data', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'staff') return res.status(403).json({ success: false });
+
+    // Count how many 'Valid' documents were processed per day for the last 5 days
+    const query = `
+        SELECT DATE_FORMAT(completed_at, '%a') as day_name, COUNT(*) as daily_count
+        FROM transactions
+        WHERE status = 'Valid' AND completed_at >= DATE(NOW()) - INTERVAL 5 DAY
+        GROUP BY DATE(completed_at), day_name
+        ORDER BY DATE(completed_at) ASC
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true, chartData: results });
+    });
+});
+
+// --- 4. ADMIN ROUTES ---
+
+// Get all staff and admin users for the table
+app.get('/api/admin/users', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') return res.status(403).json({ success: false });
+
+    // TWEAK: Added u.office_id to the SELECT so the frontend can pre-fill the edit dropdown
+    const query = `
+        SELECT u.user_id, u.full_name, u.email, u.role, u.office_id, o.name as office_name
+        FROM users u
+        LEFT JOIN offices o ON u.office_id = o.office_id
+        WHERE u.role IN ('staff', 'admin')
+        ORDER BY u.user_id ASC
+    `;
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true, users: results });
+    });
+});
+
+// Update an existing staff account
+app.put('/api/admin/users/:id', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') return res.status(403).json({ success: false });
+
+    const userId = req.params.id;
+    const { fullName, email, password, officeId } = req.body;
+
+    // Security check: Only update if the user being edited is NOT an admin
+    let query = `UPDATE users SET full_name = ?, email = ?, office_id = ? WHERE user_id = ? AND role != 'admin'`;
+    let params = [fullName, email, officeId, userId];
+
+    // If the admin typed in a new password, update that too
+    if (password && password.trim() !== '') {
+        query = `UPDATE users SET full_name = ?, email = ?, password_hash = ?, office_id = ? WHERE user_id = ? AND role != 'admin'`;
+        params = [fullName, email, password, officeId, userId];
+    }
+
+    db.query(query, params, (err) => {
+        if (err) {
+            console.error("MySQL Update Error:", err);
+            if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ success: false, message: 'Email already exists.' });
+            return res.status(500).json({ success: false, message: 'Database error.' });
+        }
+        res.json({ success: true, message: 'Account updated successfully!' });
+    });
+});
+
+// Create a new staff account
+app.post('/api/admin/users', (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') return res.status(403).json({ success: false });
+
+    const { fullName, email, password, officeId } = req.body;
+    
+    // Insert the new user. Note: We hardcode 'staff' here because admins shouldn't accidentally make other admins from this basic form!
+    const query = `INSERT INTO users (full_name, email, password_hash, role, office_id) VALUES (?, ?, ?, 'staff', ?)`;
+
+    db.query(query, [fullName, email, password, officeId], (err) => {
+        if (err) {
+            // NEW: Print the exact error to your terminal so you can see what broke!
+            console.error("MySQL Insert Error:", err); 
+
+            // Check if the email is already taken
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ success: false, message: 'An account with that email already exists.' });
+            }
+            return res.status(500).json({ success: false, message: 'Database error. Check your server terminal for details.' });
+        }
+        res.json({ success: true, message: 'Staff account created successfully!' });
+    });
+});
+
+// Get System Logs (Audit Trail)
+app.get('/api/admin/logs', (req, res) => {
+    // Security check
+    if (!req.session.user || req.session.user.role !== 'admin') return res.status(403).json({ success: false });
+
+    // Join transactions, documents, and TWO instances of users (one for student, one for staff)
+    const query = `
+        SELECT 
+            t.transaction_id, 
+            t.status, 
+            t.completed_at, 
+            d.file_name,
+            u_student.full_name as student_name,
+            u_staff.full_name as staff_name, 
+            o.name as office_name
+        FROM transactions t
+        JOIN documents d ON t.transaction_id = d.transaction_id
+        JOIN users u_student ON t.student_id = u_student.user_id
+        JOIN users u_staff ON t.handled_by = u_staff.user_id
+        LEFT JOIN offices o ON u_staff.office_id = o.office_id
+        WHERE t.handled_by IS NOT NULL
+        ORDER BY t.completed_at DESC
+        LIMIT 100 -- Keep the page loading fast by only grabbing the last 100 actions
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Log fetch error:", err);
+            return res.status(500).json({ success: false });
+        }
+        res.json({ success: true, logs: results });
+    });
+});
+
+// Get Global Analytics (Compare Offices)
+app.get('/api/admin/analytics', (req, res) => {
+    // Security check
+    if (!req.session.user || req.session.user.role !== 'admin') return res.status(403).json({ success: false });
+
+    // Group the data by Office to compare their performance
+    const query = `
+        SELECT 
+            o.name as office_name,
+            COUNT(t.transaction_id) as total_processed,
+            AVG(TIMESTAMPDIFF(SECOND, t.submitted_at, t.completed_at)) as avg_seconds
+        FROM transactions t
+        JOIN offices o ON t.office_id = o.office_id
+        WHERE t.status = 'Valid' AND t.completed_at IS NOT NULL
+        GROUP BY o.office_id, o.name
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Analytics fetch error:", err);
+            return res.status(500).json({ success: false });
+        }
+        res.json({ success: true, analytics: results });
     });
 });
 

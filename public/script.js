@@ -16,11 +16,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Check which page we are on to determine which header to load
             const currentPath = window.location.pathname;
             
-            // FIX: Now it checks if ANY part of the URL contains "staff-"
-            const isStaffPage = currentPath.includes('staff-'); 
-            
-            // Fetch staff-header.html for staff, header.html for students
-            const headerFile = isStaffPage ? 'staff-header.html' : 'header.html';
+            let headerFile = 'header.html'; // Default to student
+            if (currentPath.includes('staff-')) {
+                headerFile = 'staff-header.html';
+            } else if (currentPath.includes('admin-')) {
+                headerFile = 'admin-header.html';
+            }
             
             const response = await fetch(headerFile);
             const data = await response.text();
@@ -77,11 +78,13 @@ if (loginForm) {
             const data = await response.json();
 
             if (data.success) {
-                // Check the role sent from the database and redirect accordingly!
-                if (data.role === 'staff' || data.role === 'admin') {
-                    window.location.href = '/staff-dashboard.html';
+                // THE FIX: Check the specific role and route to the correct dashboard
+                if (data.role === 'admin') {
+                    window.location.href = '/admin-dashboard.html'; // Admins go here
+                } else if (data.role === 'staff') {
+                    window.location.href = '/staff-dashboard.html'; // Staff goes here
                 } else {
-                    window.location.href = '/student-dashboard.html';
+                    window.location.href = '/student-dashboard.html'; // Students go here
                 }
             } else {
                 alert('Error: ' + data.message);
@@ -397,17 +400,61 @@ if (window.location.pathname.includes('staff-processed') && document.querySelect
 // --- 11. STAFF ANALYTICS DYNAMIC UI ---
 if (window.location.pathname.includes('staff-analytics')) {
     
-    // 1. Animate the CSS Bar Chart
-    const bars = document.querySelectorAll('.bar');
-    // Start them at 0%
-    bars.forEach(bar => {
-        const targetHeight = bar.style.height;
-        bar.style.height = '0%';
-        // Animate up to their target height
-        setTimeout(() => {
-            bar.style.height = targetHeight;
-        }, 300);
-    });
+    // 1. Initialize Chart.js Bar Chart
+    async function loadChart() {
+        try {
+            const res = await fetch('/api/staff/chart-data');
+            const data = await res.json();
+
+            if (data.success && data.chartData.length > 0) {
+                // Extract the days and counts from the database response
+                const labels = data.chartData.map(row => row.day_name);
+                const counts = data.chartData.map(row => row.daily_count);
+
+                const ctx = document.getElementById('processingChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels, 
+                        datasets: [{
+                            label: 'Documents Processed',
+                            data: counts, 
+                            backgroundColor: '#4A72A4',
+                            borderRadius: 4,
+                            maxBarThickness: 50 // <-- THE FIX: Prevents the giant bar!
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, // Lets it stretch nicely in your layout
+                        plugins: {
+                            legend: {
+                                display: false // Hides the "Documents Processed" label at the top to match your clean design
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { stepSize: 1 },
+                                grid: { color: '#F0F0F0' }, // Soft horizontal lines
+                                border: { display: false } // Removes the harsh black axis line
+                            },
+                            x: {
+                                grid: { display: false }, // Removes vertical lines for a cleaner look
+                                border: { display: false } 
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Fallback if the database is entirely empty
+                document.getElementById('processingChart').outerHTML = "<p style='color:#888; text-align:center;'>Not enough data yet.</p>";
+            }
+        } catch (err) {
+            console.error("Failed to load chart data", err);
+        }
+    }
+    loadChart();
 
     // 2. Generate Dynamic Alerts based on the Stats
     async function generateAlerts() {
@@ -447,4 +494,503 @@ if (window.location.pathname.includes('staff-analytics')) {
     generateAlerts();
 }
 
+// --- 12. STUDENT DASHBOARD LOGIC (Cards & Table) ---
+const studentDocsBody = document.getElementById('student-docs-body');
 
+// Only run this script if we are actually on the student dashboard
+if (window.location.pathname.includes('student-dashboard')) {
+
+    // 1. Load Student Stats (Summary Cards)
+    async function loadStudentStats() {
+        try {
+            const res = await fetch('/api/student/stats');
+            const data = await res.json();
+            
+            if (data.success) {
+                const stats = data.stats;
+                
+                // Select all the <h2> tags inside the summary cards
+                const cards = document.querySelectorAll('.summary-card h2');
+                
+                if (cards.length >= 4) {
+                    cards[0].innerText = stats.submitted || 0;
+                    cards[1].innerText = stats.approved || 0;
+                    cards[2].innerText = stats.pending || 0;
+                    cards[3].innerText = stats.rejected || 0;
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load student stats", err);
+        }
+    }
+
+    // 2. Load Student Documents (The Main Table)
+    async function loadStudentTable() {
+        if (!studentDocsBody) return; // Failsafe if the table ID is missing
+        
+        try {
+            const res = await fetch('/api/student/documents');
+            const data = await res.json();
+            
+            if (data.success) {
+                studentDocsBody.innerHTML = ''; // Clear out any loading text
+                
+                if(data.documents.length === 0) {
+                    studentDocsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;">No documents submitted yet.</td></tr>`;
+                    return;
+                }
+
+                data.documents.forEach(doc => {
+                    // Determine colors based on status
+                    let colorClass = doc.status === 'Valid' ? 'text-green' : 
+                                     (doc.status === 'Incomplete' || doc.status === 'Missing') ? 'text-red' : 'text-orange';
+                    
+                    // Format the date (DD/MM/YYYY)
+                    let dateObj = new Date(doc.submitted_at);
+                    let dateStr = dateObj.toLocaleDateString('en-GB'); 
+
+                    // Swap the button based on the status (Download vs View)
+                    let actionBtn = doc.status === 'Valid' 
+                        ? `<button class="btn-outline-purple">☁ Download</button>`
+                        : `<button class="btn-outline-orange view-details-btn">View</button>`;
+
+                    // Clean up the file name (removes the multer timestamp for a cleaner look)
+                    let cleanFileName = doc.file_name.split('-').pop() || doc.file_name;
+
+                    studentDocsBody.innerHTML += `
+                        <tr>
+                            <td>${cleanFileName}</td>
+                            <td>~5 minutes</td> 
+                            <td>${dateStr}</td>
+                            <td class="${colorClass}">${doc.status}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load student table", err);
+        }
+    }
+
+    // Run both functions immediately when the page loads!
+    loadStudentStats();
+    loadStudentTable();
+}
+
+// --- 13. FULL DOCUMENT PAGE LOGIC (Search & Filter) ---
+if (window.location.pathname.includes('document.html') || window.location.pathname.includes('/document')) {
+    const allDocsBody = document.getElementById('all-documents-body');
+    const searchInput = document.getElementById('doc-search');
+    const filterSelect = document.getElementById('doc-filter');
+    const detailsModal = document.getElementById('details-modal');
+    
+    let allStudentData = []; // Store data globally for instant filtering
+
+    async function loadAllDocuments() {
+        if (!allDocsBody) return;
+        try {
+            const res = await fetch('/api/student/documents');
+            const data = await res.json();
+            
+            if (data.success) {
+                allStudentData = data.documents;
+                renderDocsTable(allStudentData);
+            }
+        } catch (err) {
+            console.error("Failed to load documents", err);
+        }
+    }
+
+    function renderDocsTable(dataToRender) {
+        allDocsBody.innerHTML = ''; 
+
+        if (dataToRender.length === 0) {
+            allDocsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;">No documents found.</td></tr>`;
+            return;
+        }
+
+        dataToRender.forEach(doc => {
+            let colorClass = doc.status === 'Valid' ? 'text-green' : 
+                             (doc.status === 'Incomplete' || doc.status === 'Missing') ? 'text-red' : 'text-orange';
+            
+            // Format the date (DD/MM/YYYY)
+            let dateObj = new Date(doc.submitted_at);
+            let dateStr = dateObj.toLocaleDateString('en-GB'); 
+
+            let actionBtn = doc.status === 'Valid' 
+                ? `<button class="btn-outline-purple">☁ Download</button>`
+                : `<button class="btn-outline-orange view-details-btn" data-status="${doc.status}">View</button>`;
+
+            let cleanFileName = doc.file_name.split('-').pop() || doc.file_name;
+
+            allDocsBody.innerHTML += `
+                <tr>
+                    <td>${cleanFileName}</td>
+                    <td>~5 minutes</td> 
+                    <td>${dateStr}</td>
+                    <td class="${colorClass}">${doc.status}</td>
+                    <td>${actionBtn}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // Dynamic Filter & Search Function
+    function applyStudentFilters() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filterVal = filterSelect.value.toLowerCase();
+
+        const filteredData = allStudentData.filter(doc => {
+            // 1. Check Search Bar (matches filename)
+            const cleanFileName = (doc.file_name.split('-').pop() || doc.file_name).toLowerCase();
+            const matchesSearch = cleanFileName.includes(searchTerm);
+            
+            // 2. Check Dropdown
+            let matchesFilter = true;
+            if (filterVal === 'valid') {
+                matchesFilter = doc.status === 'Valid';
+            } else if (filterVal === 'processing') {
+                matchesFilter = (doc.status === 'Processing' || doc.status === 'Submitted');
+            } else if (filterVal === 'incomplete') {
+                matchesFilter = (doc.status === 'Incomplete' || doc.status === 'Missing');
+            }
+
+            return matchesSearch && matchesFilter;
+        });
+
+        renderDocsTable(filteredData);
+    }
+
+    // Attach listeners for instant feedback
+    if (searchInput) searchInput.addEventListener('input', applyStudentFilters);
+    if (filterSelect) filterSelect.addEventListener('change', applyStudentFilters);
+
+    // Event Delegation for the "View" buttons (so the modal pops up on dynamically generated buttons)
+    if (allDocsBody) {
+        allDocsBody.addEventListener('click', (e) => {
+            const viewBtn = e.target.closest('.view-details-btn');
+            if (viewBtn && detailsModal) {
+                detailsModal.style.display = 'flex';
+            }
+        });
+    }
+
+    // Close Modal Logic
+    const closeBtn = document.getElementById('close-details-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            detailsModal.style.display = 'none';
+        });
+    }
+
+    loadAllDocuments(); // Run everything on page load
+}
+
+// --- 14. ADMIN DASHBOARD LOGIC (Manage Staff) ---
+if (window.location.pathname.includes('admin-dashboard')) {
+    const adminUsersBody = document.getElementById('admin-users-body');
+    const addStaffModal = document.getElementById('add-staff-modal');
+    const addStaffForm = document.getElementById('add-staff-form');
+    
+    // Edit Modal Elements
+    const editStaffModal = document.getElementById('edit-staff-modal');
+    const editStaffForm = document.getElementById('edit-staff-form');
+    
+    let allAdminUsers = []; // Store the user list globally so we can grab their data to edit
+
+    // 1. Fetch and Display the Staff Roster
+    async function loadAdminUsers() {
+        if (!adminUsersBody) return;
+        try {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+
+            if (data.success) {
+                allAdminUsers = data.users; // Save data to our global array
+                adminUsersBody.innerHTML = '';
+                
+                data.users.forEach(user => {
+                    let roleBadge = user.role === 'admin' 
+                        ? `<span style="background: #FDEDEC; color: #E74C3C; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight:bold;">Admin</span>`
+                        : `<span style="background: #E8F8F5; color: #1ABC9C; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight:bold;">Staff (${user.office_name || 'No Office'})</span>`;
+
+                    // We added a specific class (edit-btn) and a data-id to the button
+                    adminUsersBody.innerHTML += `
+                        <tr>
+                            <td>#${user.user_id}</td>
+                            <td>${user.full_name}</td>
+                            <td>${user.email}</td>
+                            <td>${roleBadge}</td>
+                            <td><button class="btn-outline-purple edit-btn" data-id="${user.user_id}">Edit</button></td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load users", err);
+        }
+    }
+
+    // 2. Handle Opening/Closing Modals
+    const openAddBtn = document.getElementById('open-add-staff-modal');
+    const closeAddBtn = document.getElementById('close-add-staff-modal');
+    const closeEditBtn = document.getElementById('close-edit-staff-modal');
+    
+    if (openAddBtn) openAddBtn.addEventListener('click', () => addStaffModal.style.display = 'flex');
+    if (closeAddBtn) closeAddBtn.addEventListener('click', () => { addStaffModal.style.display = 'none'; addStaffForm.reset(); });
+    if (closeEditBtn) closeEditBtn.addEventListener('click', () => { editStaffModal.style.display = 'none'; editStaffForm.reset(); });
+
+    // 3. Handle Clicks on the "Edit" Buttons using Event Delegation
+    if (adminUsersBody) {
+        adminUsersBody.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            if (editBtn) {
+                const userId = editBtn.getAttribute('data-id');
+                // Find this specific user in our stored array
+                const userToEdit = allAdminUsers.find(u => u.user_id == userId);
+
+                if (userToEdit) {
+                    // Prevent editing of Admin accounts
+                    if (userToEdit.role === 'admin') {
+                        alert("For security reasons, Master Admins cannot be edited from this panel.");
+                        return;
+                    }
+
+                    // Pre-fill the modal with the user's data
+                    document.getElementById('edit-user-id').value = userToEdit.user_id;
+                    document.getElementById('edit-staff-name').value = userToEdit.full_name;
+                    document.getElementById('edit-staff-email').value = userToEdit.email;
+                    document.getElementById('edit-staff-office').value = userToEdit.office_id || 1;
+                    
+                    editStaffModal.style.display = 'flex';
+                }
+            }
+        });
+    }
+
+    // 4. Submit Add Form
+    if (addStaffForm) {
+        addStaffForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('new-staff-name').value;
+            const email = document.getElementById('new-staff-email').value;
+            const password = document.getElementById('new-staff-password').value;
+            const officeId = document.getElementById('new-staff-office').value;
+
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullName, email, password, officeId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    addStaffModal.style.display = 'none';
+                    addStaffForm.reset();
+                    loadAdminUsers();
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (err) { console.error("Error creating staff", err); }
+        });
+    }
+
+    // 5. Submit Edit Form
+    if (editStaffForm) {
+        editStaffForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('edit-user-id').value;
+            const fullName = document.getElementById('edit-staff-name').value;
+            const email = document.getElementById('edit-staff-email').value;
+            const password = document.getElementById('edit-staff-password').value;
+            const officeId = document.getElementById('edit-staff-office').value;
+
+            try {
+                // Notice the PUT method and the userId attached to the URL
+                const res = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullName, email, password, officeId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    editStaffModal.style.display = 'none';
+                    editStaffForm.reset();
+                    loadAdminUsers(); // Instantly reload table with updated data!
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (err) { console.error("Error updating staff", err); }
+        });
+    }
+
+    loadAdminUsers(); 
+}
+
+// --- 15. ADMIN SYSTEM LOGS LOGIC ---
+if (window.location.pathname.includes('admin-logs')) {
+    const logsBody = document.getElementById('admin-logs-body');
+    const logSearch = document.getElementById('log-search');
+    let allLogs = [];
+
+    async function loadSystemLogs() {
+        if (!logsBody) return;
+        try {
+            const res = await fetch('/api/admin/logs');
+            const data = await res.json();
+
+            if (data.success) {
+                allLogs = data.logs;
+                renderLogsTable(allLogs);
+            }
+        } catch (err) {
+            console.error("Failed to load logs", err);
+        }
+    }
+
+    function renderLogsTable(dataToRender) {
+        logsBody.innerHTML = '';
+        
+        if (dataToRender.length === 0) {
+            logsBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #888;">No system activity recorded yet.</td></tr>`;
+            return;
+        }
+
+        dataToRender.forEach(log => {
+            let colorClass = log.status === 'Valid' ? 'text-green' : 'text-red';
+            let dateObj = new Date(log.completed_at);
+            let timeStr = dateObj.toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
+
+            logsBody.innerHTML += `
+                <tr>
+                    <td>#${log.transaction_id}</td>
+                    <td>${log.student_name}</td>
+                    <td>${log.file_name.split('-').pop()}</td>
+                    <td><strong>${log.staff_name}</strong> <br><span style="font-size: 0.8rem; color: #777;">${log.office_name}</span></td>
+                    <td>${timeStr}</td>
+                    <td class="${colorClass}">${log.status}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // Real-time Search Filter
+    if (logSearch) {
+        logSearch.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allLogs.filter(log => 
+                log.staff_name.toLowerCase().includes(term) ||
+                log.student_name.toLowerCase().includes(term) ||
+                log.transaction_id.toString().includes(term)
+            );
+            renderLogsTable(filtered);
+        });
+    }
+
+    loadSystemLogs();
+}
+
+// --- 16. ADMIN GLOBAL ANALYTICS LOGIC ---
+if (window.location.pathname.includes('admin-analytics')) {
+    async function loadGlobalAnalytics() {
+        try {
+            const res = await fetch('/api/admin/analytics');
+            const data = await res.json();
+
+            if (data.success && data.analytics.length > 0) {
+                // Prepare the data arrays for the charts
+                const labels = data.analytics.map(row => row.office_name);
+                const volumeData = data.analytics.map(row => row.total_processed);
+                
+                // Convert seconds to minutes for the wait time chart, rounded to 1 decimal
+                const timeData = data.analytics.map(row => (row.avg_seconds / 60).toFixed(1));
+
+                // 1. Draw Volume Chart (Blue Bars)
+                const ctxVolume = document.getElementById('volumeChart').getContext('2d');
+                new Chart(ctxVolume, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Total Processed',
+                            data: volumeData,
+                            backgroundColor: '#4A72A4',
+                            borderRadius: 4,
+                            maxBarThickness: 60
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#F0F0F0' }, border: { display: false } },
+                            x: { grid: { display: false }, border: { display: false } }
+                        }
+                    }
+                });
+
+                // 2. Draw Time Chart (Orange Bars)
+                const ctxTime = document.getElementById('timeChart').getContext('2d');
+                new Chart(ctxTime, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Avg. Wait Time (Mins)',
+                            data: timeData,
+                            backgroundColor: '#E67E22', // Orange color to distinguish from volume
+                            borderRadius: 4,
+                            maxBarThickness: 60
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#F0F0F0' }, border: { display: false } },
+                            x: { grid: { display: false }, border: { display: false } }
+                        }
+                    }
+                });
+            } else {
+                // If there's no data at all yet
+                document.querySelector('.review-grid').innerHTML = "<p style='color:#888; text-align:center; width: 100%;'>Not enough data to generate analytics yet. Process some documents first!</p>";
+            }
+        } catch (err) {
+            console.error("Failed to load global analytics", err);
+        }
+    }
+
+    loadGlobalAnalytics();
+}
+
+// --- 17. PASSWORD VISIBILITY TOGGLE ---
+const togglePasswordBtn = document.getElementById('toggle-password');
+const passwordInput = document.getElementById('password');
+
+if (togglePasswordBtn && passwordInput) {
+    togglePasswordBtn.addEventListener('click', function () {
+        // 1. Toggle the input type between password and text
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        // 2. Swap the SVG icon
+        const eyeIcon = document.getElementById('eye-icon');
+        if (type === 'text') {
+            // "Eye Off" Icon (Slash through it)
+            eyeIcon.innerHTML = `
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            `;
+        } else {
+            // Default "Eye Open" Icon
+            eyeIcon.innerHTML = `
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            `;
+        }
+    });
+}

@@ -66,21 +66,23 @@ body {
 }
 
 .login-container {
-    flex: 1;
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+    /* THE FIX: Force everything inside to stack vertically and center */
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    align-items: flex-start;
-    padding-top: 50px;
 }
 
 .login-card {
+    width: 100%; /* Forces the card to stretch to the edges of the container */
     background: white;
     padding: 40px;
-    border-radius: 8px;
-    border: 1px solid #E0E0E0;
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.05);
-    width: 100%;
-    max-width: 550px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box; /* Stops padding from breaking the width */
 }
 
 .input-group {
@@ -1069,3 +1071,206 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* Ensure the Chart.js canvas fits the panel perfectly */
+.chart-panel canvas {
+    max-height: 250px;
+    width: 100% !important;
+}
+
+/* --- MODAL FORM STYLING --- */
+.modal-content .form-group {
+    margin-bottom: 18px;
+    text-align: left; /* Keeps the labels neatly aligned to the left */
+}
+
+.modal-content .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+}
+
+/* Target the inputs and dropdowns to make them big and clean */
+.modal-content .form-group input[type="text"],
+.modal-content .form-group input[type="email"],
+.modal-content .form-group input[type="password"],
+.modal-content .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: #333;
+    font-family: inherit;
+    background-color: #f8fafc;
+    box-sizing: border-box; /* Prevents the inputs from spilling outside the box */
+    transition: all 0.2s ease;
+}
+
+/* Add a nice blue glow when the user clicks inside a text box */
+.modal-content .form-group input:focus,
+.modal-content .form-group select:focus {
+    outline: none;
+    border-color: #4A72A4;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(74, 114, 164, 0.15);
+}
+
+/* Ensure the submit button has some breathing room */
+.modal-content .submit-btn {
+    margin-top: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 6px;
+}
+
+/* --- MODERN LOGIN PAGE STYLES --- */
+.login-bg {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.login-title {
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: #2c3e50;
+    font-size: 1.6rem;
+}
+
+.login-subtitle {
+    color: #777;
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+}
+
+/* --- LOGIN FORM INPUT STYLES --- */
+.login-card .form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.login-card .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+}
+
+/* Make the text boxes big, clean, and modern */
+.login-card .form-group input[type="email"],
+.login-card .form-group input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1rem;
+    color: #333;
+    background-color: #f8fafc;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+/* Add a clean focus glow when typing */
+.login-card .form-group input:focus {
+    outline: none;
+    border-color: #2c3e50;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.15);
+}
+
+/* Ensure the password eye icon doesn't overlap typed text */
+.login-card .password-wrapper input {
+    padding-right: 45px;
+}
+
+/* Password Toggle Layout */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    width: 100%;
+    padding-right: 45px; /* Leaves space so text doesn't hide behind the eye */
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    outline: none;
+    transition: transform 0.2s;
+}
+
+.password-toggle-btn:hover {
+    transform: scale(1.1);
+}
+
+.password-toggle-btn:hover svg {
+    stroke: #4A72A4; /* Icon turns blue on hover */
+}
+
+.login-options {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 25px;
+    margin-top: -5px;
+}
+
+.forgot-link {
+    color: #4A72A4;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    background-color: #2c3e50;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+    background-color: #1a252f;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+}
+

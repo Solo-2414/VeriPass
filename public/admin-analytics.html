@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriPass - Global Analytics</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-bg">
+
+    <div id="header-placeholder"></div>
+
+    <main class="dashboard-container">
+        
+        <div class="upload-page-header animate-on-load">
+            <h2 class="upload-page-title">Global Analytics</h2>
+            <p style="color: #666; margin-top: 5px;">Comparing performance across all university offices.</p>
+        </div>
+
+        <div class="review-grid animate-on-load" style="margin-top: 20px;">
+            <div class="chart-panel" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">Total Documents Processed</h3>
+                <canvas id="volumeChart" height="250"></canvas>
+            </div>
+
+            <div class="chart-panel" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">Average Wait Time (Minutes)</h3>
+                <canvas id="timeChart" height="250"></canvas>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="dash-footer">
+        <p>VeriPass &copy; 2026. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

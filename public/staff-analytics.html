@@ -39,12 +39,9 @@
         <div class="analytics-layout animate-on-load">
             <div class="chart-panel">
                 <h3>Processing Speed by Day</h3>
-                <div class="mock-chart">
-                    <div class="bar-container"><div class="bar" style="height: 60%;"></div><span>Mon</span></div>
-                    <div class="bar-container"><div class="bar" style="height: 80%;"></div><span>Tue</span></div>
-                    <div class="bar-container"><div class="bar" style="height: 100%;"></div><span>Wed</span></div>
-                    <div class="bar-container"><div class="bar" style="height: 50%;"></div><span>Thu</span></div>
-                    <div class="bar-container"><div class="bar" style="height: 90%;"></div><span>Fri</span></div>
+                <div class="chart-panel">
+                    <h3>Processing Speed by Day</h3>
+                    <canvas id="processingChart" height="200"></canvas>
                 </div>
             </div>
             
@@ -61,9 +58,10 @@
     </main>
 
     <footer class="dash-footer">
-        <p>Copyright Text</p>
+        <p>VeriPass &copy; 2026. All rights reserved.</p>
     </footer>
-
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
