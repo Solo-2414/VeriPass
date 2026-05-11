@@ -44,7 +44,7 @@ const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root', 
     password: process.env.DB_PASSWORD || '241405', 
-    database: process.env.DB_NAME || 'MediSparta',
+    database: process.env.DB_NAME || 'veripass',
     port: process.env.DB_PORT || 3306,
     ssl: {
         rejectUnauthorized: false
@@ -183,19 +183,34 @@ app.post('/api/staff/update-status', (req, res) => {
     const { transactionId, status, remarks } = req.body;
     const staffId = req.session.user.id;
 
-    // FIX: If the status is 'Valid', we stamp the completed_at time so we can calculate efficiency!
-    let query = `UPDATE transactions SET status = ?, handled_by = ? WHERE transaction_id = ?`;
+    // STEP 1: Update the TRANSACTIONS table
+    let transQuery = `UPDATE transactions SET status = ?, handled_by = ? WHERE transaction_id = ?`;
     if (status === 'Valid') {
-        query = `UPDATE transactions SET status = ?, handled_by = ?, completed_at = CURRENT_TIMESTAMP WHERE transaction_id = ?`;
+        transQuery = `UPDATE transactions SET status = ?, handled_by = ?, completed_at = CURRENT_TIMESTAMP WHERE transaction_id = ?`;
     }
 
-    db.query(query, [status, staffId, transactionId], (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'Database error' });
-
-        if (remarks) {
-            db.query(`UPDATE documents SET remarks = ? WHERE transaction_id = ?`, [remarks, transactionId]);
+    db.query(transQuery, [status, staffId, transactionId], (err) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ success: false, message: 'Database error' });
         }
-        res.json({ success: true, message: 'Status updated successfully!' });
+
+        // STEP 2: Update the DOCUMENTS table to match!
+        let docQuery = `UPDATE documents SET status = ? WHERE transaction_id = ?`;
+        let docParams = [status, transactionId];
+
+        // If the staff left a remark, update the remark column too
+        if (remarks) {
+            docQuery = `UPDATE documents SET status = ?, remarks = ? WHERE transaction_id = ?`;
+            docParams = [status, remarks, transactionId];
+        }
+
+        db.query(docQuery, docParams, (err) => {
+            if (err) console.error("Failed to update documents table:", err);
+            
+            // Send success message back to the frontend
+            res.json({ success: true, message: 'Status updated successfully!' });
+        });
     });
 });
 
